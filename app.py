@@ -1,15 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import google.generativeai as genai
+import requests
 import os
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Configure Gemini (Free) ---
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-# --- Resume Context ---
 RESUME_CONTEXT = """
 You are an AI assistant on Jose Paulo Timbang's portfolio website (josepaulotimbang.com).
 Answer questions about Paulo professionally, warmly, and concisely.
@@ -78,10 +77,8 @@ TECHNICAL SKILLS:
 Web Development & Design:
 - HTML, CSS, JavaScript, PHP
 - WordPress (themes, plugins, customization)
-- Shopify
-- Laravel, CodeIgniter (PHP frameworks)
-- Figma (UI/UX design)
-- Adobe Photoshop
+- Shopify, Laravel, CodeIgniter
+- Figma, Adobe Photoshop
 - Responsive & mobile-first design
 - SEO optimization
 
@@ -91,40 +88,32 @@ Computer Technician Skills:
 - Networking Setup & Troubleshooting
 - BIOS/UEFI Configuration
 - Operating System installation & management
-- Data Recovery
-- Cybersecurity Measures
+- Data Recovery, Cybersecurity Measures
 - Remote Technical Support
-- Inventory & Client Communication Management
 
 ---
 
 SERVICES PAULO OFFERS:
 - Web Development (custom websites, WordPress, Shopify)
-- Web Design / UI-UX (visually appealing, user-friendly layouts)
-- Digital Marketing (SEO, social media, online growth)
-- Computer Tech Support (PC repair, networking, troubleshooting)
+- Web Design / UI-UX
+- Digital Marketing (SEO, social media)
+- Computer Tech Support (PC repair, networking)
 - Graphic Design (logos, banners, marketing materials)
-- Frontend & Backend Development (full-stack capability)
+- Frontend & Backend Development
 
 ---
 
 PORTFOLIO:
-Paulo has a portfolio of web design and development projects visible at
-https://josepaulotimbang.com/portfolio/
+Paulo has a portfolio visible at https://josepaulotimbang.com/portfolio/
 
 ---
 
 AVAILABILITY & RATES:
-If asked about availability, pricing, or hiring Paulo, always direct visitors to:
+Direct visitors to:
 - Email: contactme@josepaulotimbang.com
 - Contact page: https://josepaulotimbang.com/contact/
 - LinkedIn: https://www.linkedin.com/in/josepaulotimbang/
 """
-
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=RESUME_CONTEXT
-)
 
 
 @app.route("/chat", methods=["POST"])
@@ -137,20 +126,47 @@ def chat():
         return jsonify({"error": "Empty message"}), 400
 
     try:
-        # Build Gemini chat history
-        gemini_history = []
+        # Build conversation contents
+        contents = []
+
+        # Add chat history
         for turn in history[-10:]:
-            gemini_history.append({
-                "role": turn["role"],
-                "parts": [turn["text"]]
+            role = "user" if turn["role"] == "user" else "model"
+            contents.append({
+                "role": role,
+                "parts": [{"text": turn["text"]}]
             })
 
-        # Start chat session with history
-        chat_session = model.start_chat(history=gemini_history)
+        # Add current user message
+        contents.append({
+            "role": "user",
+            "parts": [{"text": user_message}]
+        })
 
-        # Send only the user message (system context handled by model)
-        response = chat_session.send_message(user_message)
-        reply = response.text
+        # Build request payload
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": RESUME_CONTEXT}]
+            },
+            "contents": contents,
+            "generationConfig": {
+                "maxOutputTokens": 500,
+                "temperature": 0.7
+            }
+        }
+
+        # Call Gemini REST API directly
+        response = requests.post(
+            GEMINI_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+
+        result = response.json()
+
+        # Extract reply text
+        reply = result["candidates"][0]["content"]["parts"][0]["text"]
 
         return jsonify({"reply": reply})
 

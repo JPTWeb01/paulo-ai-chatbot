@@ -4,11 +4,10 @@ import google.generativeai as genai
 import os
 
 app = Flask(__name__)
-CORS(app)  # Allow WordPress site to call this API
+CORS(app)
 
 # --- Configure Gemini (Free) ---
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")  # Free tier model
 
 # --- Resume Context ---
 RESUME_CONTEXT = """
@@ -44,34 +43,31 @@ giving him a solid foundation in troubleshooting and technical problem-solving. 
 also includes digital marketing assistance and tech support, allowing him to bridge the gap
 between development, user needs, and business goals.
 
-He has worked with clients locally and overseas, collaborating with people from different
-backgrounds. This has taught him to adapt, communicate well, and design with the end user in mind.
-
 ---
 
 WORK EXPERIENCE:
 
-1. Web Designer (2013–2022)
+1. Web Designer (2013-2022)
    - Designed and developed responsive websites for various clients
    - Technologies: HTML, CSS, JavaScript, PHP, WordPress
    - Focus: UX, performance optimization, SEO, digital marketing strategies
 
-2. Web Developer (2013–2022)
+2. Web Developer (2013-2022)
    - Built and maintained responsive websites, custom tools, and CMS-driven platforms
    - Integrated SEO, analytics, and social media features
    - Optimized code performance and site functionality
 
-3. Computer Technician (2008–2022)
+3. Computer Technician (2008-2022)
    - PC assembly, hardware/software support, and repairs for residential and business clients
    - BIOS/UEFI configuration, OS installation, data recovery
    - Cybersecurity implementation, network setup and troubleshooting
    - Remote technical support, inventory and client communication management
 
-4. Graphic Designer (2020–2022)
+4. Graphic Designer (2020-2022)
    - Created marketing materials, social media graphics, and custom website visuals
    - Designed responsive layouts and maintained visual brand consistency
 
-5. Digital Marketing Assistant (2020–2022)
+5. Digital Marketing Assistant (2020-2022)
    - Supported brand identity and online engagement through creative visuals
    - Assisted with social media and digital campaigns
 
@@ -114,8 +110,7 @@ SERVICES PAULO OFFERS:
 
 PORTFOLIO:
 Paulo has a portfolio of web design and development projects visible at
-https://josepaulotimbang.com/portfolio/ — including website designs, UI mockups,
-and client projects across various industries.
+https://josepaulotimbang.com/portfolio/
 
 ---
 
@@ -126,12 +121,17 @@ If asked about availability, pricing, or hiring Paulo, always direct visitors to
 - LinkedIn: https://www.linkedin.com/in/josepaulotimbang/
 """
 
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=RESUME_CONTEXT
+)
+
 
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json()
     user_message = data.get("message", "").strip()
-    history = data.get("history", [])  # list of {role, text}
+    history = data.get("history", [])
 
     if not user_message:
         return jsonify({"error": "Empty message"}), 400
@@ -139,19 +139,17 @@ def chat():
     try:
         # Build Gemini chat history
         gemini_history = []
-        for turn in history[-10:]:  # last 10 turns only
+        for turn in history[-10:]:
             gemini_history.append({
-                "role": turn["role"],           # "user" or "model"
+                "role": turn["role"],
                 "parts": [turn["text"]]
             })
 
-        # Start chat with history
+        # Start chat session with history
         chat_session = model.start_chat(history=gemini_history)
 
-        # First message injects the system context
-        full_prompt = f"{RESUME_CONTEXT}\n\nVisitor question: {user_message}"
-
-        response = chat_session.send_message(full_prompt)
+        # Send only the user message (system context handled by model)
+        response = chat_session.send_message(user_message)
         reply = response.text
 
         return jsonify({"reply": reply})
@@ -165,8 +163,6 @@ def health():
     return jsonify({"status": "ok", "message": "Paulo AI Chatbot is running"})
 
 
-import os
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)

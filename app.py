@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
@@ -7,7 +10,6 @@ app = Flask(__name__)
 CORS(app)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
 RESUME_CONTEXT = """
 You are an AI assistant on Jose Paulo Timbang's portfolio website (josepaulotimbang.com).
@@ -37,11 +39,6 @@ in WordPress development, computer technology, and digital support. He specializ
 reliable, high-performance websites with a strong focus on clean design, responsive layouts,
 and seamless user experience.
 
-He has a deep-rooted passion for technology, having spent years building and repairing computers,
-giving him a solid foundation in troubleshooting and technical problem-solving. His background
-also includes digital marketing assistance and tech support, allowing him to bridge the gap
-between development, user needs, and business goals.
-
 ---
 
 WORK EXPERIENCE:
@@ -54,62 +51,45 @@ WORK EXPERIENCE:
 2. Web Developer (2013-2022)
    - Built and maintained responsive websites, custom tools, and CMS-driven platforms
    - Integrated SEO, analytics, and social media features
-   - Optimized code performance and site functionality
 
 3. Computer Technician (2008-2022)
-   - PC assembly, hardware/software support, and repairs for residential and business clients
+   - PC assembly, hardware/software support, and repairs
    - BIOS/UEFI configuration, OS installation, data recovery
-   - Cybersecurity implementation, network setup and troubleshooting
-   - Remote technical support, inventory and client communication management
+   - Cybersecurity, network setup, remote technical support
 
 4. Graphic Designer (2020-2022)
-   - Created marketing materials, social media graphics, and custom website visuals
-   - Designed responsive layouts and maintained visual brand consistency
+   - Created marketing materials, social media graphics, website visuals
 
 5. Digital Marketing Assistant (2020-2022)
-   - Supported brand identity and online engagement through creative visuals
-   - Assisted with social media and digital campaigns
+   - Supported brand identity and online engagement
 
 ---
 
 TECHNICAL SKILLS:
-
-Web Development & Design:
 - HTML, CSS, JavaScript, PHP
-- WordPress (themes, plugins, customization)
-- Shopify, Laravel, CodeIgniter
+- WordPress, Shopify, Laravel, CodeIgniter
 - Figma, Adobe Photoshop
-- Responsive & mobile-first design
-- SEO optimization
-
-Computer Technician Skills:
-- PC Assembly & Repair
-- Hardware Replacement & Upgrades
-- Networking Setup & Troubleshooting
-- BIOS/UEFI Configuration
-- Operating System installation & management
-- Data Recovery, Cybersecurity Measures
-- Remote Technical Support
+- Responsive design, SEO optimization
+- PC Assembly & Repair, Networking, Cybersecurity
+- Data Recovery, Remote Technical Support
 
 ---
 
-SERVICES PAULO OFFERS:
-- Web Development (custom websites, WordPress, Shopify)
+SERVICES:
+- Web Development (WordPress, Shopify, custom)
 - Web Design / UI-UX
-- Digital Marketing (SEO, social media)
-- Computer Tech Support (PC repair, networking)
-- Graphic Design (logos, banners, marketing materials)
+- Digital Marketing & SEO
+- Computer Tech Support
+- Graphic Design
 - Frontend & Backend Development
 
 ---
 
-PORTFOLIO:
-Paulo has a portfolio visible at https://josepaulotimbang.com/portfolio/
+PORTFOLIO: https://josepaulotimbang.com/portfolio/
 
 ---
 
-AVAILABILITY & RATES:
-Direct visitors to:
+CONTACT:
 - Email: contactme@josepaulotimbang.com
 - Contact page: https://josepaulotimbang.com/contact/
 - LinkedIn: https://www.linkedin.com/in/josepaulotimbang/
@@ -126,6 +106,8 @@ def chat():
         return jsonify({"error": "Empty message"}), 400
 
     try:
+        GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+
         # Build conversation contents
         contents = []
 
@@ -155,7 +137,7 @@ def chat():
             }
         }
 
-        # Call Gemini REST API directly
+        # Call Gemini REST API
         response = requests.post(
             GEMINI_URL,
             json=payload,
@@ -163,9 +145,9 @@ def chat():
             timeout=30
         )
 
-result = response.json()
+        result = response.json()
 
-        # Debug: print full response
+        # Print full response for debugging
         print(f"Gemini response: {result}")
 
         # Check for API errors
@@ -173,23 +155,20 @@ result = response.json()
             print(f"Gemini API error: {result['error']}")
             return jsonify({"error": result["error"]["message"]}), 500
 
-        # Check for blocked content
-        if "promptFeedback" in result:
-            print(f"Prompt feedback: {result['promptFeedback']}")
-
-        # Extract reply text
+        # Check candidates exist
         if not result.get("candidates"):
+            print(f"No candidates in response: {result}")
             return jsonify({"error": "No response from Gemini"}), 500
 
+        # Extract reply
         reply = result["candidates"][0]["content"]["parts"][0]["text"]
-
         return jsonify({"reply": reply})
 
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         print(f"ERROR: {error_details}")
-        return jsonify({"error": str(e), "details": error_details}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/health", methods=["GET"])

@@ -111,7 +111,7 @@ def chat():
         return jsonify({"error": "Empty message"}), 400
 
     try:
-        GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={GEMINI_API_KEY}"
+        GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
 
         # Build conversation contents
         contents = []

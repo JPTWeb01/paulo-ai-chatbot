@@ -1,27 +1,33 @@
 /* ===== Paulo AI Chatbot Widget ===== */
 
+/*
+ * POINTER-EVENTS STRATEGY:
+ * 1. Wrapper has pointer-events: none — invisible to touches/clicks at all times
+ * 2. Only the toggle button gets pointer-events: auto — always clickable
+ * 3. Chat window gets pointer-events: none by default (closed state)
+ * 4. Chat window gets pointer-events: auto only when .open class is added
+ * This ensures NOTHING inside the widget blocks page content when chat is closed
+ */
+
 #paulo-chatbot-wrapper {
     position: fixed;
-    bottom: 80px;
+    bottom: 24px;
     right: 16px;
     z-index: 999999;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    display: block !important;
-    visibility: visible !important;
-    pointer-events: none;  /* ← ADD THIS */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+
+    /* CRITICAL: wrapper never blocks clicks */
+    pointer-events: none;
+
+    /* Constrain wrapper to only what it needs */
+    width: fit-content;
+    height: fit-content;
 }
 
-/* Restore clicks only on interactive elements */
-#paulo-chat-toggle,
-#paulo-chat-window,
-#paulo-chat-close,
-#paulo-chat-input,
-#paulo-chat-send,
-.suggestion-chip {
-    pointer-events: auto;
-}
-
-/* ---- Toggle Button ---- */
+/* ---- Toggle Button (always clickable) ---- */
 #paulo-chat-toggle {
     width: 60px;
     height: 60px;
@@ -36,9 +42,12 @@
     justify-content: center;
     font-size: 20px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    margin-left: auto;
+    flex-shrink: 0;
     -webkit-appearance: none;
     appearance: none;
+
+    /* Toggle button is ALWAYS clickable */
+    pointer-events: auto;
 }
 
 #paulo-chat-toggle:hover {
@@ -49,7 +58,7 @@
 /* ---- Chat Window ---- */
 #paulo-chat-window {
     width: 340px;
-    height: 480px;
+    max-height: 480px;
     background: #fff;
     border-radius: 18px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
@@ -57,16 +66,22 @@
     flex-direction: column;
     margin-bottom: 14px;
     overflow: hidden;
+
+    /* Closed state — hidden and NOT blocking clicks */
     opacity: 0;
     transform: translateY(20px) scale(0.96);
     pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    visibility: hidden;
+
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
 }
 
+/* Open state — visible AND clickable */
 #paulo-chat-window.open {
     opacity: 1;
     transform: translateY(0) scale(1);
-    pointer-events: all;
+    pointer-events: auto;
+    visibility: visible;
 }
 
 /* ---- Header ---- */
@@ -304,20 +319,49 @@
 #paulo-chat-send:hover { transform: scale(1.08); }
 #paulo-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ---- Mobile ---- */
+/* ---- Mobile: small phones (up to 480px) ---- */
 @media (max-width: 480px) {
-    #paulo-chat-window {
-        width: calc(100vw - 32px);
-        right: 0;
-        bottom: 80px;
-    }
     #paulo-chatbot-wrapper {
         bottom: 16px;
-        right: 16px;
+        right: 12px;
+    }
+
+    #paulo-chat-window {
+        /* Fit within screen with padding, never full width */
+        width: calc(100vw - 24px);
+        max-height: 70vh;
+        margin-bottom: 10px;
+
+        /* Anchor to right edge of wrapper, not full screen */
+        position: absolute;
+        bottom: 70px;
+        right: 0;
+
+        /* Still hidden and non-blocking when closed */
+        pointer-events: none;
+        visibility: hidden;
+    }
+
+    #paulo-chat-window.open {
+        pointer-events: auto;
+        visibility: visible;
     }
 }
 
-/* Clickable links inside chat bubbles */
+/* ---- Tablet: 481px to 768px ---- */
+@media (min-width: 481px) and (max-width: 768px) {
+    #paulo-chatbot-wrapper {
+        bottom: 20px;
+        right: 16px;
+    }
+
+    #paulo-chat-window {
+        width: 320px;
+        max-height: 460px;
+    }
+}
+
+/* ---- Clickable links inside chat bubbles ---- */
 .bot-msg .bubble a {
     color: #0073aa;
     text-decoration: underline;
@@ -326,4 +370,15 @@
 
 .bot-msg .bubble a:hover {
     color: #005f8d;
+}
+
+/* ---- Reduced motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+    #paulo-chat-window,
+    #paulo-chat-toggle,
+    .chat-msg,
+    .typing-bubble span {
+        animation: none;
+        transition: none;
+    }
 }

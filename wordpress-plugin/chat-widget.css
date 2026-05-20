@@ -8,6 +8,17 @@
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     display: block !important;
     visibility: visible !important;
+    pointer-events: none;  /* ← ADD THIS */
+}
+
+/* Restore clicks only on interactive elements */
+#paulo-chat-toggle,
+#paulo-chat-window,
+#paulo-chat-close,
+#paulo-chat-input,
+#paulo-chat-send,
+.suggestion-chip {
+    pointer-events: auto;
 }
 
 /* ---- Toggle Button ---- */

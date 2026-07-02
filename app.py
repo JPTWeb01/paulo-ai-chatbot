@@ -3,11 +3,17 @@ load_dotenv()
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 import requests
 import os
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 CORS(app)
+
+limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL")
@@ -107,11 +113,12 @@ WORK EXPERIENCE:
 TECHNICAL SKILLS:
 
 Web Development:
-- HTML, CSS, JavaScript, PHP, Python
+- HTML, CSS, JavaScript, TypeScript, PHP, Python
 - WordPress (custom theme & plugin development)
-- Shopify, Laravel, CodeIgniter
+- Shopify, Laravel, CodeIgniter 4
+- Next.js 16, React 19, Tailwind CSS, Framer Motion
 - Flask (Python web framework)
-- REST API Development & Integration
+- REST API Development & Integration, JWT authentication
 - Responsive design, SEO optimization
 
 AI & Machine Learning:
@@ -157,7 +164,7 @@ and is focusing on remote work and online clients at this time.
 ---
 
 SERVICES:
-- Web Development (WordPress, Shopify, custom, Python/Flask)
+- Web Development (WordPress, Shopify, custom, Python/Flask, Next.js/React, CodeIgniter 4)
 - AI Chatbot Development & Integration
 - Web Design / UI/UX
 - REST API Development
@@ -180,6 +187,14 @@ Paulo AI Resume Chatbot (2026)
 - Live at: https://josepaulotimbang.com
 - Code at: https://github.com/JPTWeb01/paulo-ai-chatbot
 
+Portfolio Website v2 — josepaulotimbang.com (2026)
+- Rebuilt personal portfolio site from the ground up as a full-stack app
+- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion for animations
+- Backend: PHP REST API built with CodeIgniter 4, JWT authentication (firebase/php-jwt)
+- Database: SQL migrations for schema management
+- DevOps: GitHub Actions CI/CD workflow for automated frontend deployment
+- Code at: https://github.com/JPTWeb01/josepaulotimbang.com
+
 PORTFOLIO: https://josepaulotimbang.com/portfolio/
 
 ---
@@ -196,6 +211,7 @@ For unrelated questions, respond with light humor and redirect back to portfolio
 
 
 @app.route("/chat", methods=["POST"])
+@limiter.limit("8 per minute; 60 per hour")
 def chat():
     data = request.get_json()
     user_message = data.get("message", "").strip()
@@ -203,6 +219,9 @@ def chat():
 
     if not user_message:
         return jsonify({"error": "Empty message"}), 400
+
+    if len(user_message) > 1000:
+        return jsonify({"error": "Message too long"}), 400
 
     try:
         GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -268,6 +287,11 @@ def chat():
         error_details = traceback.format_exc()
         print(f"ERROR: {error_details}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(e):
+    return jsonify({"error": "rate_limited"}), 429
 
 
 @app.route("/health", methods=["GET"])

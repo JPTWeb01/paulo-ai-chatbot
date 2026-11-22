@@ -8,6 +8,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 import requests
 import os
+import threading
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
@@ -21,6 +22,33 @@ LOCATION = os.environ.get("LOCATION")
 IMMIGRATION_STATUS = os.environ.get("IMMIGRATION_STATUS")
 LINKEDIN = os.environ.get("LINKEDIN")
 PERSONAL_EMAIL = os.environ.get("PERSONAL_EMAIL")
+
+# Chat logging to the portfolio admin dashboard (optional; off when unset)
+CHAT_LOG_URL = os.environ.get("CHAT_LOG_URL")  # e.g. https://josepaulotimbang.com/api/v1/chat-logs
+INGEST_KEY = os.environ.get("INGEST_KEY")
+# Only log chats from these sites (comma-separated origins). Empty = log every site.
+CHAT_LOG_ORIGINS = {o.strip().rstrip("/") for o in os.environ.get("CHAT_LOG_ORIGINS", "").split(",") if o.strip()}
+
+
+def log_chat(entry):
+    """Send one exchange to the dashboard API. Runs in a thread so it never slows or breaks the chat."""
+    if not CHAT_LOG_URL or not INGEST_KEY:
+        return
+    if CHAT_LOG_ORIGINS and entry.get("site") not in CHAT_LOG_ORIGINS:
+        return
+
+    def send():
+        try:
+            requests.post(
+                CHAT_LOG_URL,
+                json=entry,
+                headers={"X-Ingest-Key": INGEST_KEY},
+                timeout=5,
+            )
+        except Exception as e:
+            print(f"Chat log failed: {e}")
+
+    threading.Thread(target=send, daemon=True).start()
 
 RESUME_CONTEXT = f"""
 You ARE Jose Paulo Timbang — a web developer and computer technician based in {LOCATION}.
@@ -280,6 +308,15 @@ def chat():
 
         # Extract reply
         reply = result["candidates"][0]["content"]["parts"][0]["text"]
+        log_chat({
+            "ip": request.remote_addr,
+            "session_id": str(data.get("session_id") or "")[:40],
+            "page": str(data.get("page") or "")[:255],
+            "site": request.headers.get("Origin", "")[:120],
+            "user_agent": request.headers.get("User-Agent", "")[:255],
+            "message": user_message,
+            "reply": reply,
+        })
         return jsonify({"reply": reply})
 
     except Exception as e:

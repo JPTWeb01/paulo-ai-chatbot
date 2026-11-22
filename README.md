@@ -60,6 +60,11 @@ Here are the best FREE options:
 3. Set build command: `pip install -r requirements.txt`
 4. Set start command: `gunicorn app:app`
 5. Add environment variable: `GEMINI_API_KEY = your_key`
+   - Optional chat logging to the admin dashboard at josepaulotimbang.com/admin:
+     `CHAT_LOG_URL = https://josepaulotimbang.com/api/v1/chat-logs`,
+     `INGEST_KEY` (same value as the portfolio backend's `INGEST_KEY`), and
+     `CHAT_LOG_ORIGINS = https://josepaulotimbang.com` so only chats from sites that show
+     the logging notice are saved. Logging runs in the background and never blocks a reply.
 6. Deploy → get your URL like: `https://paulo-chatbot.onrender.com`
 
 ### Option B: Railway.app
